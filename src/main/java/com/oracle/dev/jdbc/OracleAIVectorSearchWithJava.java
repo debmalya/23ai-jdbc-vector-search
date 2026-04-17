@@ -17,6 +17,11 @@
 
 package com.oracle.dev.jdbc;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import oracle.jdbc.OracleType;
+import oracle.ucp.jdbc.PoolDataSource;
+import oracle.ucp.jdbc.PoolDataSourceFactory;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,21 +30,19 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
 
-import oracle.jdbc.OracleType;
-import oracle.ucp.jdbc.PoolDataSource;
-import oracle.ucp.jdbc.PoolDataSourceFactory;
-
 public class OracleAIVectorSearchWithJava {
 
 	private final static String URL = "jdbc:oracle:thin:@localhost:1521/FREEPDB1";
-	private final static String USERNAME = System.getenv("DB_23AI_USERNAME");
-	private final static String PASSWORD = System.getenv("DB_23AI_PASSWORD");
+	// how to load system properties using Dotenv
+	private static final Dotenv dotenv = Dotenv.load();
+	private final static String USERNAME = dotenv.get("DB_23AI_USERNAME");
+	private final static String PASSWORD = dotenv.get("DB_23AI_PASSWORD");
 
-	private String insertSql = "INSERT INTO ORACLE_AI_VECTOR_SEARCH_DEMO (ID, VECTOR_DATA) VALUES (?, ?)";
-	private String querySql = "SELECT ID, VECTOR_DATA FROM ORACLE_AI_VECTOR_SEARCH_DEMO";
-	private String querySqlWithBind = "SELECT ID, VECTOR_DATA FROM ORACLE_AI_VECTOR_SEARCH_DEMO ORDER BY VECTOR_DISTANCE(VECTOR_DATA, ?, COSINE)";
 
-	public static void main(String[] args) throws SQLException {
+	private final String insertSql = "INSERT INTO ORACLE_AI_VECTOR_SEARCH_DEMO (ID, VECTOR_DATA) VALUES (?, ?)";
+	private final String querySql = "SELECT ID, VECTOR_DATA FROM ORACLE_AI_VECTOR_SEARCH_DEMO";
+
+    public static void main(String[] args) throws SQLException {
 		OracleAIVectorSearchWithJava oracleAIVectorSearch = new OracleAIVectorSearchWithJava();
 		oracleAIVectorSearch.execute();
 	}
@@ -136,7 +139,8 @@ public class OracleAIVectorSearchWithJava {
 	}
 
 	private void retrieveVectorWithBoundVector(Connection connection) throws SQLException {
-		PreparedStatement queryStatement = connection.prepareStatement(querySqlWithBind);
+        String querySqlWithBind = "SELECT ID, VECTOR_DATA FROM ORACLE_AI_VECTOR_SEARCH_DEMO ORDER BY VECTOR_DISTANCE(VECTOR_DATA, ?, COSINE)";
+        PreparedStatement queryStatement = connection.prepareStatement(querySqlWithBind);
 		float[] inputVector = { 1.0f, 2.2f, 3.3f };
 		System.out.println("SQL DML: " + querySqlWithBind);
 		System.out.println("Bound VECTOR: " + Arrays.toString(inputVector));
@@ -162,8 +166,7 @@ public class OracleAIVectorSearchWithJava {
 		// Override any pool properties directly
 		pds.setInitialPoolSize(10);
 		// Get a database connection from the pool-enabled data source
-		Connection conn = pds.getConnection();
-		return conn;
+		return pds.getConnection();
 	}
 
 	private int randomize() {
